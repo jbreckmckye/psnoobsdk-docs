@@ -1,0 +1,679 @@
+<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 1.4: Controllers</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<style>
+body {
+	max-width: 900px;
+	margin: auto;
+	padding: 8px;
+	font-family: sans-serif;
+	font-size: 14px;
+}
+
+h {
+	background-color: #e0e0e0;
+	padding: 2px;
+}
+
+h2 {
+	border-bottom: 1px solid;
+}
+
+img {
+	display: block;
+}
+
+.footer-table {
+	font-size: 14px;
+}
+
+.bordered-table {
+	border-collapse: collapse;
+	font-size: 11px;
+}
+
+.bordered-table th, .bordered-table td {
+	border: 1px solid;
+	padding: 4px;
+}
+
+hr {
+	border: none;
+	border-bottom: 1px solid black;
+}
+
+pre {
+	padding: 8px;
+	font-size: 12px;
+	color: black;
+	background-color: LightGray;
+}
+	
+.mirror-notice {
+	padding: 8px;
+	border: 1px solid gold;
+	background: #ffff008a;
+}
+</style>
+
+</head><body>
+ <div class="mirror-notice">This is a mirror of the original Lameguy tutorial. It is hosted on <a href="https://github.com/jbreckmckye/psnoobsdk-docs">GitHub pages</a> but the content belongs to John Wilbert Villamor aka Lameguy.</div>
+
+<h1>Chapter 1.4: Controllers</h1>
+
+<p>One of the most important aspects when writing software for a game
+console is taking input from a controller, as otherwise what's the point of
+a game where the player can't take control of it? Unless its some demoscene
+stuff you intend to write for the console.</p>
+
+<p>This chapter goes over how to initialize and handle controller input in
+your PS1 program. This is something that hasn't really been explained very
+well in many tutorials that I've seen in my personal experience, so I'll try
+my best to explain how controller input is handled on the PS1 in great
+detail.</p>
+
+<p><b>Compatible with PSn00bSDK:</b> Yes</p>
+
+<h2>Tutorial Index</h2>
+<ul>
+<li><a href="#getinput">Methods to Obtain Controller Input</a></li>
+<li><a href="#initpad">Initializing the Pad Subsystem</a></li>
+<li><a href="#parsepad">Parsing Controller Data</a></li>
+<li><a href="#implementation">Implementation</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+
+<h2 id="getinput">Methods to Obtain Controller Input</h2>
+
+<p>There are a number of ways to obtain input from the controller on the
+PS1; direct hardware access (complicated), through BIOS
+<b>InitPAD()/StartPAD()</b> (simpler, but has some limitations), though
+<b>PadInit()/PadRead()</b> (even simpler, but  only works with digital
+pads), and through various controller related libraries such as
+libtap, libgun and libpad provided in the PsyQ/Programmers' Tool SDK.</p>
+
+<p>The most common method people tend to use is <b>PadInit()</b> and
+<b>PadRead()</b>, and whilst it is the most simplest to use it is not
+exactly the most ideal method for a proper game project. For one it only
+works with digital pads and Dual-shock pads with analog turned off. Secondly,
+there's no way to determine if a pad is disconnected or not and rumble
+features on Dual-shock pads cannot be accessed with it. It is, however,
+ideal for prototype test programs.</p>
+
+<p>Another method which is a little more ideal is to use <b>InitPAD()</b>
+and <b>StartPAD()</b> which are provided by the BIOS ROM of the console. This
+method is not only capable of determining if a controller is attached or not
+but it also works with a wider variety of controllers including multi-taps.
+The only controllers that it doesn't really support properly are both the
+Namco and Konami lightguns as they need to be polled in a specific way for
+it to work, which is not supported by these functions. Lightguns are beyond
+the scope for this chapter anyway. It still cannot access rumble features
+of Dual-analog and Dual-shock controllers however.</p>
+
+<p>For compatibility with PSn00bSDK, only the BIOS <b>InitPAD()</b> and
+<b>StartPAD()</b> functions will be covered in this chapter. In the future,
+I will look into making a follow-up that uses libpad or a similar equivalent
+library for PSn00bSDK that would also cover accessing rumble features of
+Dual-analog and Dual-shock pads.</p>
+
+
+<h2 id="initpad">Initializing the Pad Subsystem</h2>
+
+<p>The first step is to define an array of two 34 byte elements. This array
+will be used as a buffer for storing incoming controller data which requires
+at least about 34 bytes per controller port. It may sound a bit excessive for
+storing input data, but this is necessary in case a multitap is connected to
+one of the ports, as a multitap will return up to 34 bytes from all four
+controllers connected to the tap.</p>
+
+<pre>u_char padbuff[2][34];
+</pre>
+
+<p>Next is to call <b>InitPAD()</b> to define the pad array to the BIOS
+controller subsystem. libpad still uses the same buffer format that
+<b>InitPAD()</b> would return data to, so upgrading from the BIOS pad
+routines to libpad should be pretty trivial.</p>
+
+<pre>InitPAD( padbuff[0], 34, padbuff[1], 34 );
+</pre>
+
+<p>Before you start controller polling, it may be a good idea to set the
+first two elements of both arrays with 0xff, so that your program won't
+process faulty input when the array is parsed with zero filled data. You'll
+figure out why later in this chapter.</p>
+
+<pre>padbuff[0][0] = padbuff[0][1] = 0xff;
+padbuff[1][0] = padbuff[1][1] = 0xff;
+</pre>
+
+<p>Then start controller polling with <b>StartPAD()</b>.</p>
+
+<pre>StartPAD();
+</pre>
+
+<p>After calling <b>StartPAD()</b> and you have a tty console in your
+development setup (or the message window in no$psx), you may see the
+message <i>"VSync: Timeout"</i> pop-up when your program reaches a
+<b>VSync</b> call. This happens because <b>StartPAD()</b> annoyingly
+re-enables automatic VSync interrupt acknowledge in the PS1's kernel,
+preventing the <b>VSync()</b> function from detecting a VSync interrupt
+from occuring. Fortunately, it has a timeout, of which it will disable
+the automatic VSync acknowledge so it can detect VSync interrupts again.
+This can happen on both Programmer's Tool and PSn00bSDK.</p>
+
+<p>In PSn00bSDK, you can avoid this  message by calling
+<b>ChangeClearPAD(1)</b> after <b>StartPAD()</b>, but this function is only
+really exposed in PSn00bSDK.</p>
+
+<p>It is generally unnecessary to stop controller polling using
+<b>StopPAD()</b>, plus it may cause Dual-shock controllers to reset their
+controller mode back to digital mode. If you're using BIOS memory card
+functions later down the line, stopping pads will also stop memory cards
+as well. Using <b>StopPAD()</b> is only really required when transferring
+execution to a child PS-EXE or another PS-EXE altogether.</p>
+
+
+<h2 id="parsepad">Parsing Controller Data</h2>
+
+<p>After calling <b>StartPAD()</b>, the <h>padbuff</h> array will be filled
+with controller data in every frame. For NTSC systems this is 60 times a
+second and 50 for PAL systems. Therefore, the controller ports are polled
+automatically, so the only thing to do next is to parse the input data
+stored in the arrays.</p>
+
+<p>Because the PS1's BIOS controller handler depends on VSync interrupts to
+poll the controller ports, you will not be able to receive further inputs
+when interrupts are disabled, but this isn't really something to worry about
+yet at this point in this tutorial series.</p>
+
+<p>Now, onto the pad buffer data. The first byte stored in the <h>padbuff</h>
+array denotes the status of the port. A value of zero indicates that a
+device (ie. controller) is connected to the port and the rest of the array
+contains valid controller data.</p>
+<pre>if( padbuff[0][0] == 0 )
+{
+    // controller on port 1 connected
+}
+</pre>
+<p>The following byte is the controller ID, denoting both the controller
+type and the number of bytes the controller has sent to the console. The
+controller type is stored in the upper 4 bits of the ID byte while the data
+byte is at the lower 4 bits.</p>
+
+<pre>padtype = padbuff[0][1]&gt;&gt;4;    // get the controller type
+padlen  = padbuff[0][1]&amp;0xF;   // get the data length (normally not needed)
+</pre>
+
+<p>The following table lists controller type values that are relevant to this
+chapter. Lightgun IDs are omitted as you won't be able to poll them properly
+anyway.</p>
+
+<center>
+<table class="bordered-table">
+<tbody><tr>
+<th>Controller</th><th>Type Value</th>
+</tr>
+<tr><td>Mouse</td><td>0x1</td></tr>
+<tr><td>Namco NegCon</td><td>0x2</td></tr>
+<tr><td>Digital pad or Dual-shock in digital mode (no light)</td><td>0x4</td></tr>
+<tr><td>Analog Stick or Dual-analog in green mode</td><td>0x5</td></tr>
+<tr><td>Dual-shock in analog mode or Dual-analog in red mode</td><td>0x7</td></tr>
+<tr><td>Namco JogCon</td><td>0xE</td></tr>
+</tbody></table>
+</center>
+
+<p>The two bytes following the ID byte are usually the controller's digital
+button states as a 16-bit integer, with each bit representing the state
+of one button. Oddly, the bit states are inverted, where a bit value of 1
+means released and a value of 0 means pressed.</p>
+
+<p>The following table lists which bit of the 16-bit word corresponds to each
+button of a standard digital pad or Dual-shock controller. Both controllers
+share the same bit positions.</p>
+
+<center>
+<table class="bordered-table">
+<tbody><tr><th>Bit</th><th>Button</th></tr>
+<tr><td>0</td><td>Select</td></tr>
+<tr><td>1</td><td>L3 (Dual-shock only)</td></tr>
+<tr><td>2</td><td>R3 (Dual-shock only)</td></tr>
+<tr><td>3</td><td>Start</td></tr>
+<tr><td>4</td><td>Up</td></tr>
+<tr><td>5</td><td>Right</td></tr>
+<tr><td>6</td><td>Down</td></tr>
+<tr><td>7</td><td>Left</td></tr>
+<tr><td>8</td><td>L2</td></tr>
+<tr><td>9</td><td>R2</td></tr>
+<tr><td>10</td><td>L1</td></tr>
+<tr><td>11</td><td>R1</td></tr>
+<tr><td>12</td><td>Triangle</td></tr>
+<tr><td>13</td><td>Circle</td></tr>
+<tr><td>14</td><td>Cross</td></tr>
+<tr><td>15</td><td>Square</td></tr>
+</tbody></table>
+</center>
+
+<p>It may be a good idea to define a list of constants for each button so
+you can specify which bit to test with more coherent names. In PSn00bSDK,
+these are already defined in <h>psxpad.h.</h></p>
+
+<pre>#define PAD_SELECT      1
+#define PAD_L3          2
+#define PAD_R3          4
+#define PAD_START       8
+#define PAD_UP          16
+#define PAD_RIGHT       32
+#define PAD_DOWN        64
+#define PAD_LEFT        128
+#define PAD_L2          256
+#define PAD_R2          512
+#define PAD_L1          1024
+#define PAD_R1          2048
+#define PAD_TRIANGLE    4096
+#define PAD_CIRCLE      8192
+#define PAD_CROSS       16384
+#define PAD_SQUARE      32768
+</pre>
+
+<p>To test if a button is pressed, simply mask the 16-bit integer against the
+bit value of the button you want to test using an AND (&amp;) operator. Because
+the pressed state of a button is zero, you'll have to follow it up with a
+NOT (!) operator as well.</p>
+
+<pre>u_short button;
+
+...
+
+button = *((u_short*)(padbuff[0]+2));
+
+// is cross pressed?
+if( !( button &amp; PAD_CROSS ) )
+{
+    // do something when cross is pressed
+}
+</pre>
+
+<p>If you only need to support regular controllers (digital, analog stick,
+Dual-analog, Dual-shock), a simplle struct like this should suffice for
+all the four controller types and with analog input on controllers with
+such features. In PSn00bSDK, the following struct is already defined in
+<h>psxpad.h</h>.</p>
+
+<pre>typedef struct _PADTYPE
+{
+    unsigned char	stat;
+    unsigned char	len:4;
+    unsigned char	type:4;
+    unsigned short	btn;
+    unsigned char	rs_x,rs_y;
+    unsigned char	ls_x,ls_y;
+} PADTYPE;
+</pre>
+
+<p>If the connected controller doesn't feature any analog inputs, the
+elements following <h>btn</h> relating to analog sticks can be ignored.</p>
+
+<p>When parsing analog stick inputs, remember that the coordinates when the
+stick is at its center position is not always 128, due to deadzones and
+other factors that affect the potentiometers. Its recommended to implement
+a simple threshold to make sure your code does not register false inputs
+(at least to the player) when the stick is placed at its center position.</p>
+
+<p>For more information about controller input data, you may want to check
+the <a href="http://problemkaputt.de/psx-spx.htm#controllersstandarddigitalanalogcontrollers">
+Controllers Chapter</a> in nocash's PSX specs document.</p>
+
+
+<h2 id="implementation">Implementation</h2>
+
+<p>As an exercise for this chapter, we're going to make the textured sprite
+from the last chapter move using the controller. Begin by adding the button
+definitions, structs and <h>padbuff</h> array described in this chapter near
+the beginning of the source file, but must be placed <b>after</b> the
+<h>#include</h> directives. When using PSn00bSDK, you can simply include
+<h>psxpad.h</h> instead, which already has those defined.</p>
+
+<p>Next, place the <b>InitPAD()</b> and <b>StartPAD()</b> calls at the end
+of your <b>init()</b> function, so pads get initialized alongside the
+graphics. If you're using PSn00bSDK, you can add <b>ChangeClearPAD(1)</b>
+after <b>StartPAD()</b> to avoid the <h>VSync: Timeout</h> message from
+cropping up in your tty terminal.</p>
+
+<p>Next, define two variables named <i>pos_x</i> and <i>pos_y</i> of type
+<b>int</b> at the start of the <b>main()</b> function, preferably before
+the line that defines the <b>TILE</b> variable. These will be for storing
+the X,Y coordinates for the textured sprite. Following that, define a
+variable <i>pad</i> of type <b>PADTYPE</b>, this will be used for reading
+controller inputs more easily.</p>
+
+<p>Before the while loop, set both <i>pos_x</i> and <i>pos_y</i> to 48 to
+make sure they don't contain a random undefined value. Within the loop, add
+the following code that parses the controller and performs actions according
+to controller inputs.</p>
+
+<pre>pad = (PADTYPE*)padbuff[0];
+
+// Only parse inputs when a controller is connected
+if( pad-&gt;stat == 0 )
+{
+    // Only parse when a digital pad, 
+    // dual-analog and dual-shock is connected
+    if( ( pad-&gt;type == 0x4 ) || 
+        ( pad-&gt;type == 0x5 ) || 
+        ( pad-&gt;type == 0x7 ) )
+    {
+        if( !(pad-&gt;btn&amp;PAD;_UP) )            // test UP
+        {
+            pos_y--;
+        }
+        else if( !(pad-&gt;btn&amp;PAD;_UP) )       // test DOWN
+        {
+            pos_y++;
+        }
+        if( !(pad-&gt;btn&amp;PAD;_LEFT) )          // test LEFT
+        {
+            pos_x--;
+        }
+        else if( !(pad-&gt;btn&amp;PAD;_RIGHT) )    // test RIGHT
+        {
+            pos_x++;
+        }
+    }
+}
+</pre>
+
+<p>Now, go to the bit of code that sorts the textured sprite, and modify
+the <b>setXY0</b> macro call to use X,Y coordinates from <i>pos_x</i> and
+<i>pos_y</i>.</p>
+
+<pre>setXY0(sprt, pos_x, pos_y);
+</pre>
+
+<p>If you followed the instructions properly, the source code should look
+like this:</p>
+
+<pre>#include &lt;sys/types.h&gt;	// This provides typedefs needed by libgte.h and libgpu.h
+#include &lt;stdio.h&gt;	// Not necessary but include it anyway
+#include &lt;libetc.h&gt;	// Includes some functions that controls the display
+#include &lt;libgte.h&gt;	// GTE header, not really used but libgpu.h depends on it
+#include &lt;libgpu.h&gt;	// GPU library header
+#include &lt;libapi.h&gt;     // API header, has InitPAD() and StartPAD() defs
+
+#define OTLEN 8         // Ordering table length (recommended to set as a define
+                        // so it can be changed easily)
+
+DISPENV disp[2];        // Display/drawing buffer parameters
+DRAWENV draw[2];
+int db = 0;
+
+// PSn00bSDK requires having all u_long types replaced with
+// u_int, as u_long in modern GCC that PSn00bSDK uses defines it as a 64-bit integer.
+
+u_long ot[2][OTLEN];    // Ordering table length
+char pribuff[2][32768]; // Primitive buffer
+char *nextpri;          // Next primitive pointer
+
+int tim_mode;           // TIM image parameters
+RECT tim_prect,tim_crect;
+int tim_uoffs,tim_voffs;
+
+// Pad stuff (omit when using PSn00bSDK)
+#define PAD_SELECT      1
+#define PAD_L3          2
+#define PAD_R3          4
+#define PAD_START       8
+#define PAD_UP          16
+#define PAD_RIGHT       32
+#define PAD_DOWN        64
+#define PAD_LEFT        128
+#define PAD_L2          256
+#define PAD_R2          512
+#define PAD_L1          1024
+#define PAD_R1          2048
+#define PAD_TRIANGLE    4096
+#define PAD_CIRCLE      8192
+#define PAD_CROSS       16384
+#define PAD_SQUARE      32768
+
+typedef struct _PADTYPE
+{
+    unsigned char	stat;
+    unsigned char	len:4;
+    unsigned char	type:4;
+    unsigned short	btn;
+    unsigned char	rs_x,rs_y;
+    unsigned char	ls_x,ls_y;
+} PADTYPE;
+
+// pad buffer arrays
+u_char padbuff[2][34];
+
+void display() {
+    
+    DrawSync(0);                // Wait for any graphics processing to finish
+    
+    VSync(0);                   // Wait for vertical retrace
+
+    PutDispEnv(&amp;disp;[db]);      // Apply the DISPENV/DRAWENVs
+    PutDrawEnv(&amp;draw;[db]);
+
+    SetDispMask(1);             // Enable the display
+
+    DrawOTag(ot[db]+OTLEN-1);   // Draw the ordering table
+    
+    db = !db;                   // Swap buffers on every pass (alternates between 1 and 0)
+    nextpri = pribuff[db];      // Reset next primitive pointer
+    
+}
+
+// Texture upload function
+void LoadTexture(u_long *tim, TIM_IMAGE *tparam) {
+
+    // Read TIM parameters (PsyQ)
+    OpenTIM(tim);
+    ReadTIM(tparam);
+
+    // Read TIM parameters (PSn00bSDK)
+    //GetTimInfo(tim, tparam);
+
+    // Upload pixel data to framebuffer
+    LoadImage(tparam-&gt;prect, (u_long*)tparam-&gt;paddr);
+    DrawSync(0);
+
+    // Upload CLUT to framebuffer if present
+    if( tparam-&gt;mode &amp; 0x8 ) {
+
+        LoadImage(tparam-&gt;crect, (u_long*)tparam-&gt;caddr);
+        DrawSync(0);
+
+    }
+
+}
+
+void loadstuff(void) {
+
+    TIM_IMAGE my_image;         // TIM image parameters
+
+    extern u_long tim_my_image[];
+
+    // Load the texture
+    LoadTexture(tim_my_image, &amp;my;_image);
+
+    // Copy the TIM coordinates
+    tim_prect   = *my_image.prect;
+    tim_crect   = *my_image.crect;
+    tim_mode    = my_image.mode;
+
+    // Calculate U,V offset for TIMs that are not page aligned
+    tim_uoffs = (tim_prect.x%64)&lt;&lt;(2-(tim_mode&amp;0x3));
+    tim_voffs = (tim_prect.y&amp;0xff);
+
+}
+
+// To make main look tidy, init stuff has to be moved here
+void init(void) {
+	
+    // Reset graphics
+    ResetGraph(0);
+
+    // First buffer
+    SetDefDispEnv(&amp;disp;[0], 0, 0, 320, 240);
+    SetDefDrawEnv(&amp;draw;[0], 0, 240, 320, 240);
+    // Second buffer
+    SetDefDispEnv(&amp;disp;[1], 0, 240, 320, 240);
+    SetDefDrawEnv(&amp;draw;[1], 0, 0, 320, 240);
+
+    draw[0].isbg = 1;               // Enable clear
+    setRGB0(&amp;draw;[0], 63, 0, 127);  // Set clear color (dark purple)
+    draw[1].isbg = 1;
+    setRGB0(&amp;draw;[1], 63, 0, 127);
+
+    nextpri = pribuff[0];           // Set initial primitive pointer address
+ 
+    // load textures and possibly other stuff
+    loadstuff();
+
+    // set tpage of lone texture as initial tpage
+    draw[0].tpage = getTPage( tim_mode&amp;0x3, 0, tim_prect.x, tim_prect.y );
+    draw[1].tpage = getTPage( tim_mode&amp;0x3, 0, tim_prect.x, tim_prect.y );
+
+    // apply initial drawing environment
+    PutDrawEnv(&amp;draw;[!db]);
+    
+    // Initialize the pads
+    InitPAD( padbuff[0], 34, padbuff[1], 34 );
+    
+    // Begin polling
+    StartPAD();
+    
+    // To avoid VSync Timeout error, may not be defined in PsyQ
+    ChangeClearPAD( 1 );
+ 
+}
+
+int main() {
+    
+    int pos_x,pos_y;
+    PADTYPE *pad;
+    
+    TILE *tile;                         // Pointer for TILE
+    SPRT *sprt;                         // Pointer for SPRT
+
+    // Init stuff
+    init();
+	
+    pos_x = pos_y = 48;
+    
+    while(1) {
+    
+        // Parse controller input
+        pad = (PADTYPE*)padbuff[0];
+
+        // Only parse inputs when a controller is connected
+        if( pad-&gt;stat == 0 )
+        {
+            // Only parse when a digital pad, 
+            // dual-analog and dual-shock is connected
+            if( ( pad-&gt;type == 0x4 ) || 
+                ( pad-&gt;type == 0x5 ) || 
+                ( pad-&gt;type == 0x7 ) )
+            {
+                if( !(pad-&gt;btn&amp;PAD;_UP) )            // test UP
+                {
+                    pos_y--;
+                }
+                else if( !(pad-&gt;btn&amp;PAD;_DOWN) )       // test DOWN
+                {
+                    pos_y++;
+                }
+                if( !(pad-&gt;btn&amp;PAD;_LEFT) )          // test LEFT
+                {
+                    pos_x--;
+                }
+                else if( !(pad-&gt;btn&amp;PAD;_RIGHT) )    // test RIGHT
+                {
+                    pos_x++;
+                }
+            }
+        }
+
+        ClearOTagR(ot[db], OTLEN);      // Clear ordering table
+    
+        // Sort textured sprite
+        
+        sprt = (SPRT*)nextpri;
+
+        setSprt(sprt);                  // Initialize the primitive (very important)
+        setXY0(sprt, pos_x, pos_y);           // Position the sprite at (48,48)
+        setWH(sprt, 64, 64);            // Set size to 64x64 pixels
+        setUV0(sprt,                    // Set UV coordinates
+            tim_uoffs, 
+            tim_voffs);
+        setClut(sprt,                   // Set CLUT coordinates to sprite
+            tim_crect.x,
+            tim_crect.y);
+        setRGB0(sprt,                   // Set primitive color
+            128, 128, 128);
+        addPrim(ot[db], sprt);          // Sort primitive to OT
+
+        nextpri += sizeof(SPRT);        // Advance next primitive address
+        
+        
+        // Sort untextured tile primitive from the last tutorial
+        
+        tile = (TILE*)nextpri;          // Cast next primitive
+
+        setTile(tile);                  // Initialize the primitive (very important)
+        setXY0(tile, 32, 32);           // Set primitive (x,y) position
+        setWH(tile, 64, 64);            // Set primitive size
+        setRGB0(tile, 255, 255, 0);     // Set color yellow
+        addPrim(ot[db], tile);          // Add primitive to the ordering table
+        
+        nextpri += sizeof(TILE);        // Advance the next primitive pointer
+        
+    
+        // Update the display
+        display();
+        
+    }
+    
+    return 0;
+}
+</pre>
+
+<p>Compile, execute and you should get a textured sprite that you can move
+around with the directional pad of the controller.</p>
+
+<center>
+<img src="/chapter1/images/spritemove.png">
+</center>
+
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Hopefully, this chapter should teach you about getting controller input
+more than using <b>PadInit()</b> and <b>PadStart()</b>. The only downside
+with this method is that you can't control the vibration motors of either
+Dual-analog or Dual-shock controllers, or enabling analog mode on Dual-shock
+controllers in software. Hopefully, this will be covered in a future chapter
+of this tutorial series.</p>
+
+<p>In the next chapter, we'll be looking into handling analog inputs and a
+glimpse of fixed-point integer math for performing fractional calculations
+without using floats.</p>
+
+<hr>
+<table width="100%">
+<tbody><tr>
+<td width="40%" align="left"><a href="3-textures.html">Previous</a></td>
+<td width="20%" align="center"><a href="/web/20240916202225/http://lameguy64.net/tutorials/pstutorials/index.html">Back to Index</a></td>
+<td width="40%" align="right"><a href="5-fixedpoint.html">Next</a></td>
+</tr>
+</tbody></table>
+
+
+<hr>
+<center><p>2020 - 2021 Lameguy64 / Meido-Tek Productions</p></center>
+
+</body></html>
