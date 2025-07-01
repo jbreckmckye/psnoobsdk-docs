@@ -1,0 +1,173 @@
+<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lameguy's PlayStation Programming Series - Index</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<style>
+body {
+	max-width: 900px;
+	margin: auto;
+	padding: 8px;
+	font-family: sans-serif;
+	font-size: 14px;
+	//color: white;
+	//background: black;
+}
+
+h {
+	background-color: #e0e0e0;
+	padding: 2px;
+}
+
+h2 {
+	border-bottom: 1px solid;
+	//padding-left: 8px;
+}
+
+img {
+	display: block;
+}
+
+.footer-table {
+	font-size: 14px;
+}
+
+.bordered-table {
+	border-collapse: collapse;
+	font-size: 11px;
+}
+
+.bordered-table th, .bordered-table td {
+	border: 1px solid;
+	padding: 4px;
+}
+
+hr {
+	border: none;
+	border-bottom: 1px solid black;
+}
+
+pre {
+	padding: 8px;
+	font-size: 12px;
+	color: black;
+	background-color: LightGray;
+}
+	
+.mirror-notice {
+	padding: 8px;
+	border: 1px solid gold;
+	background: #ffff008a;
+}
+</style>
+
+</head><body>
+ <div class="mirror-notice">This is a mirror of the original Lameguy tutorial. It is hosted on <a href="https://github.com/jbreckmckye/psnoobsdk-docs">GitHub pages</a> but the content belongs to John Wilbert Villamor aka Lameguy.</div><h1>Lameguy's PlayStation Programming Series</h1>
+<p>
+Welcome to Lameguy64's PlayStation Programming Series! This is a series of
+tutorials I (Lameguy64) put together in my spare time that covers the basics
+and eventually, more advanced topics of programming for the original
+PlayStation.
+</p>
+<p>
+Keep in mind that this tutorial series assumes you already have prior
+experience in C programming as PlayStation specific programming topics are
+only covered here. If you're completely new to programming in general it
+is recommended to learn C first from a different tutorial series.
+</p>
+
+<h2>Tutorial Index</h2>
+<ul>
+<li><a href="overview.html">System Overview</a></li>
+<li><a href="setup.html">Setting up an SDK (needs revising)</a></li>
+<li>Chapter 1: Basic Homebrew Programming</li>
+<ul>
+	<li><a href="chapter1/1-display.html">1.1. Setting up Graphics and Hello World</a></li>
+    <li><a href="chapter1/2-graphics.html">1.2. Drawing Graphics Primitives</a></li>
+    <li><a href="chapter1/3-textures.html">1.3. Textures, TPages and CLUTs</a></li>
+    <li><a href="chapter1/4-controllers.html">1.4. Controllers</a></li>
+    <li><a href="chapter1/5-fixedpoint.html">1.5. Fixed Point Math</a></li>
+    <li><a href="chapter1/6-cdreading.html">1.6. Using the CD-ROM</a></li>
+</ul>
+<li>Chapter 2: Moderately Advanced Graphics Programming</li>
+<ul>
+    <li><a href="chapter2/1-psx3d.html">2.1. The Principles of PlayStation 3D</a></li>
+    <li>2.2. The Geometry Transformation Engine</li>
+    <li>2.3. Drawing a Spinning Cube with the GTE</li>
+    <li>2.4. The Rotation Matrix and Implementing a First-Person Camera</li>
+</ul>
+<li>Chapter 3: Intro to Assembly Language Programming</li>
+<ul>
+    <li>3.1. Writing for the Processor Directly</li>
+    <li>3.2. Performing a Hello World in Assembly (GAS)</li>
+    <li>3.3. Argument Passing and Calling Conventions</li>
+</ul>
+<li>Chapter 2: CD-ROM Basics (old)</li>
+<ul>
+    <li><a href="chapter2-old/1-cdrom.html">2.1. About the CD-ROM</a></li>
+    <li><a href="chapter2-old/2-readfile.html">2.2. Reading a file from CD-ROM</a></li>
+    <li><a href="chapter2-old/3-optimizing.html">2.3. CD-ROM Optimizations</a></li>
+</ul>
+</ul>
+
+<h2>About this tutorial series</h2>
+<p>I decided to work on this tutorial project to help make PlayStation
+homebrew programming a little more accessible even though this is likely
+not going to change much on the state of the PS1 homebrew scene and that
+nobody has bothered to write good programming tutorials that I'm aware of
+that don't just use libgs right at the start, usually with very little
+explanation to how the hardware works which in my opinion is not the right
+way to teach how to program for the target platform.</p>
+<p>The pages are written in plain HTML with minimal
+CSS styling for compatibility with older browsers so you can conveniently
+view the pages on your Windows 98 PC that has a DTL-H2000 or similar
+development hardware equipped.</p>
+
+<h2>Why is this a SVN repo and not a wiki or blog series?</h2>
+<p>
+Because it is easier for me to update, easier to run, accessible on very old
+web browsers and I rather self-host my stuff whenever possible. Wikis and things
+like wordpress can get bent.
+</p>
+
+<h2>Changelog</h2>
+<p>
+  <b>July 1, 2025:</b>
+  </p><ul>
+    <li>A mirror of the original website was hosted on GitHub pages. You're looking at it!</li>
+  </ul>
+<p></p>
+<p><b>June 28, 2021:</b></p>
+<ul>
+<li>Added missing tutorial indexes in chapters 1.3, 1.4 and 1.5.</li>
+<li>Forgot to reference Chapters 2.2 and 2.3 in the tutorial index, going
+to be replaced with a better, more consolidated chapter however to conclude
+Chapter 1 with.</li>
+<li>Added better CD-ROM chapter to conclude Chapter 1 with.</li>
+</ul>
+<p><b>March 10, 2021:</b></p>
+<ul>
+<li>Improved controllers chapter.</li>
+<li>Fixed incorrect cell count in framebuffer illustrations.</li>
+<li>Added fixed point math chapter.</li>
+</ul>
+<p><b>December 1, 2020:</b></p>
+<ul>
+<li>Added Controllers chapter.</li>
+<li>Made some corrections to Chapter 1.3.</li>
+<li>Made some corrections in the System Overview page.</li>
+</ul>
+<p><b>November 12, 2020:</b></p>
+<ul>
+<li>Significantly revised Chapter 1.3, added new illustrations and
+corrected mistakes in example code.</li>
+</ul>
+<p><b>June 4, 2020:</b></p>
+<ul>
+<li>Started changelog (should have started sooner).</li>
+<li>Rewrote Chapter 1.1, now includes hello world with some new graphics.
+</li></ul>
+
+<hr>
+<center><p>2020 - 2021 Lameguy64 / Meido-Tek Productions</p></center>
+
+</body></html>
