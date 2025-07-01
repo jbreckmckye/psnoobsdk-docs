@@ -1,0 +1,154 @@
+<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lameguy's PlayStation Programming Series - System Overview</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<style>
+body {
+	max-width: 900px;
+	margin: auto;
+	padding: 8px;
+	font-family: sans-serif;
+	font-size: 14px;
+}
+
+h {
+	background-color: #e0e0e0;
+	padding: 2px;
+}
+
+h2 {
+	border-bottom: 1px solid;
+	//padding-left: 8px;
+}
+
+img {
+	display: block;
+}
+
+.footer-table {
+	font-size: 14px;
+}
+
+.bordered-table {
+	border-collapse: collapse;
+	font-size: 11px;
+}
+
+.bordered-table th, .bordered-table td {
+	border: 1px solid;
+	padding: 4px;
+}
+
+hr {
+	border: none;
+	border-bottom: 1px solid black;
+}
+
+pre {
+	padding: 8px;
+	font-size: 12px;
+	color: black;
+	background-color: LightGray;
+}
+	
+	.mirror-notice {
+		padding: 8px;
+		border: 1px solid gold;
+		background: #ffff008a;
+	}
+</style>
+
+</head><body>
+ <div class="mirror-notice">This is a mirror of the original Lameguy tutorial. It is hosted on <a href="https://github.com/jbreckmckye/psnoobsdk-docs">GitHub pages</a> but the content belongs to John Wilbert Villamor aka Lameguy.</div>
+
+ <h1>PlayStation System Overview</h1>
+<p><b>CPU:</b> Customized MIPS R3000A 32-bit RISC CPU (might be based on the LSI L64360 embedded CPU)</p>
+<ul>
+<li>Clocked at 33.8MHz.</li>
+<li>32 32-bit general purpose registers (35 total if special hi, lo and pc
+registers are included, first register locked to zero).</li>
+<li>4KB I-cache.</li>
+<li>1KB D-cache repurposed as fast 'scratchpad' memory.</li>
+<li>Geometry Transformation Engine (GTE) for 3D vector calculations
+(accessed as cop2).</li>
+<li>No hardware floating point unit.</li>
+</ul>
+
+<p><b>Graphics:</b> Custom GPU</p>
+<ul>
+<li>Clocked at 33.8MHz (same as CPU, may need verification however).</li>
+<li>Supports display resolutions of 256x240 to 640x480 for NTSC and 256x256
+to 640x512 for PAL (272 vertical lines is apparently possible for PAL as well).</li>
+<li>Supports displaying in 16-bit or 24-bit color depths (GPU only draws
+primitives in 16-bit).</li>
+<li>RGB555 pixel format (32K colors total) with mask bit for 
+transparency/write protect masks.</li>
+<li>1MB of VRAM (connected to GPU with 16-bit memory bus, not directly
+accessible by CPU).</li>
+<li>2KB texture cache.</li>
+<li>Flat and shaded lines and polylines of up to virtually unlimited points.</li>
+<li>Fixed sized (1x1, 8x8, 16x16) and variable size flat and textured
+sprites.</li>
+<li>Flat and textured 3-point and 4-point polygons with optional shading
+(quads are drawn as two triangles).</li>
+<li>Supports 4-bit, 8-bit and 16-bit textures. 4-bit and 8-bit textures
+use color lookup tables or CLUTs as palettes.</li>
+<li>4 semi-transparency blending modes.</li>
+<li>24-bit color processing with final output converted to 16-bit with
+optional dithering (flawed on old 160pin GPUs resulting in banding
+on shaded textures).</li>
+<li>GPU draws entirely in 2D resulting to affine distortion and various
+depth clipping issues.</li>
+<li>VRAM addressed as a 1024x512 16bpp framebuffer divided into
+32 64x256 pixel pages (when texture mapping). Used for display/draw buffers,
+textures and CLUTs.</li>
+</ul>
+
+<p><b>Sound:</b> Custom SPU</p>
+<ul>
+<li>24 voices with ADSR, pitch and modulation parameters.</li>
+<li>Noise generator on any of the 24 voices.</li>
+<li>512KB SPU RAM (not accessible by CPU).</li>
+<li>44.1KHz mixing rate.</li>
+<li>Only supports ADPCM samples with loop start and loop end flags.</li>
+<li>Hardware reverb with programmable reverb registers.</li>
+<li>CD-ROM digital audio input and external digital audio input via expansion port.</li>
+</ul>
+
+<p><b>CD-ROM:</b> 2x speed CD-ROM drive</p>
+<ul>
+<li>Roughly 300KB/s maximum read speed.</li>
+<li>Wobble groove based disc authentication scheme (easily defeated by
+modchips).</li>
+<li>Supports CD-DA and CD-XA ADPCM audio playback.</li>
+<li>Hardware ADPCM decoder for CD-XA ADPCM audio tracks.</li>
+<li>CD-XA ADPCM sample rates of 18.9KHz or 37.8KHz in Mono or Stereo.</li>
+<li>Up to 32 ADPCM streams per CD-XA track (one channel at a time in
+playback, channel switching possible during playback).</li>
+<li>Supports simultaneous CD-XA playback and data streaming (commonly used
+in FMVs in conjunction with the MDEC).</li>
+</ul>
+
+<p><b>Memory:</b></p>
+<ul>
+<li>2MB DRAM (first 64KB of RAM used by system kernel).</li>
+<li>1MB VRAM.</li>
+<li>512KB SPU RAM.</li>
+<li>512KB BIOS ROM.</li>
+<li>Expansion ROM via expansion port up to 512KB supported (in default mapping).</li>
+</ul>
+
+<p><b>Storage:</b> Memory Cards</p>
+<ul>
+<li>128KB total capacity.</li>
+<li>1 block is 8KB each.</li>
+</ul>
+
+<hr>
+<a href="index.html">Back to Index</a>
+
+
+<hr>
+<center><p>2020 - 2021 Lameguy64 / Meido-Tek Productions</p></center>
+
+</body></html>
