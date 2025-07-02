@@ -1,0 +1,515 @@
+<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 2.2 (Old): Reading a file from CD-ROM</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<style>
+body {
+	max-width: 900px;
+	margin: auto;
+	padding: 8px;
+	font-family: sans-serif;
+	font-size: 14px;
+}
+
+h {
+	background-color: #e0e0e0;
+	padding: 2px;
+}
+
+h2 {
+	border-bottom: 1px solid;
+}
+
+img {
+	display: block;
+}
+
+.footer-table {
+	font-size: 14px;
+}
+
+.bordered-table {
+	border-collapse: collapse;
+	font-size: 11px;
+}
+
+.bordered-table th, .bordered-table td {
+	border: 1px solid;
+	padding: 4px;
+}
+
+hr {
+	border: none;
+	border-bottom: 1px solid black;
+}
+
+pre {
+	padding: 8px;
+	font-size: 12px;
+	color: black;
+	background-color: LightGray;
+}
+	
+.mirror-notice {
+	padding: 8px;
+	border: 1px solid gold;
+	background: #ffff008a;
+}
+</style>
+
+</head><body>
+ <div class="mirror-notice">This is a mirror of the original Lameguy tutorial. It is hosted on <a href="https://github.com/jbreckmckye/psnoobsdk-docs">GitHub pages</a> but the content belongs to John Wilbert Villamor aka Lameguy.</div>
+
+<header>
+<h1>Chapter 2.2: Reading a file from CD-ROM</h1>
+</header>
+<p>This chapter details how to read a file from the CD-ROM, loading the contents
+into system RAM using the CD-ROM library.</p>
+<p><b>PSn00bSDK Compatible:</b> Yes</p>
+
+<h2>Tutorial Index</h2>
+<ul>
+<li><a href="#cdinit">Initializing the CD-ROM</a></li>
+<li><a href="#filelocate">Locating a file in the CD-ROM</a></li>
+<li><a href="#reading">Reading File Contents</a></li>
+<li><a href="#readfunc">Simple File Read Function</a></li>
+<li><a href="#imagedemo">Image Loader Example</a></li>
+<li><a href="#imagebuild">Building the ISO image</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+
+<h2 id="cdinit">Initializing the CD-ROM</h2>
+<p>Initializing the CD-ROM library is accomplished by simply calling
+<b>CdInit()</b>. This function must be called after calling <b>ResetGraph()</b>
+and before any CD library related function. If you intend to use the SPU you
+must call <b>SpuInit()</b> immediately before calling <b>CdInit()</b>. Once the
+CD-ROM library is initialized any other CD-ROM related function can be used.</p>
+<h3>SDK Difference</h3>
+<p>In PsyQ/Programmers' Tool, <b>CdInit()</b> will throw a lot of CD retry
+messages when no disc is inserted and may lock up. In PSn00bSDK the function
+carries on like normal when no disc is inserted.</p>
+
+<h2 id="filelocate">Locating a file in the CD-ROM</h2>
+<p>The CD-ROM library does not have a concept of file handles. Instead, files
+are read by locating the start position of a file through the ISO9660 file
+system, seeking to it and issuing a read operation until a set number of
+sectors have been read. This method of loading files from disc should not be
+a problem under any circumstances as files stored in a ISO9660 file system are
+never fragmented. In fact, this method of reading files may have some
+advantages.</p>
+<p>Locating a file on the disc is done through the <b>CdSearchFile()</b>
+function, which parses through the disc's file system to locate the file
+and returns a <b>CdlFILE</b> which describes information about the file found
+including it's position in the disc.</p>
+<pre>CdlFILE file;
+
+// Search for the file
+if( !CdSearchFile( &amp;file;, "\\MYDIR\\MYFILE.DAT;1" ) )
+{
+    // Return value is NULL, file is not found
+    printf( "File not found.\n" );
+    return 0;
+}
+
+// When file found
+printf( "File found!\n" );
+</pre>
+<p>The file name must be specified as a complete path from root and must use
+backlash characters as directory separators (use \\ in C code). The file name
+must also end with a file version number which is always ';1'. If the file is
+found, it will return the pointer to the specified <b>CdlFILE</b> struct,
+otherwise it would simply return NULL.</p>
+<p>The <b>CdlFILE</b> struct contains a copy of the file name, file size and
+most importantly, the location.</p>
+
+<h2 id="reading">Reading File Contents</h2>
+<p>Now for the interesting stuff. Reading sectors is accomplished by using
+<b>CdRead()</b>. But before you start a read operation, you must first set
+the location of where to start reading from. This can be done using
+<b>CdControl()</b> and the <b>CdlSetloc</b> command. Use this to set the
+target location of the file.</p>
+<pre>char *buffer;
+
+// Allocate a buffer for the file
+buffer = (char*)malloc( 2048*((file.size+2047)/2048) );
+
+// Set seek target (seek actually happens on CdRead())
+CdControl( CdSetloc, &amp;file.loc;, 0 );
+
+// Read sectors
+CdRead( (file.size+2047)/2048, (unsigned int*)buffer, CdlModeSpeed );
+
+// Wait until read has completed
+CdReadSync( 0, 0 );
+</pre>
+<p>You may have noticed by now that read sizes in this chapter are described in
+sector units rather than byte units. That's because the CD-ROM subsystem can
+only read in sector units and the CD-ROM library is optimized for reading in
+sector units rather than buffering sectors to allow for byte by byte reading
+for performance reasons.</p>
+<p>Data sectors are typically 2048 bytes in size so buffers where data read
+from the CD would be loaded to must be multiples of 2048 bytes. The arithmetic
+to snap byte sizes to the nearest sector unit is described in the pseudo code
+described above.</p>
+<p>Once a read operation has been issued, you must wait until reading has
+completed using <b>CdReadSync()</b>. You can alternatively poll the status
+asynchronously by setting the <i>mode</i> parameter to 1 to perform animations
+while waiting for a long read to complete.</p>
+<p>If you intend to read only a part of a file instead of a whole file in a
+single read operation, be aware that you can't simply call <b>CdRead()</b>
+again to read the following sectors. Instead, you must retrieve the current
+location using <b>CdlGetloc</b>, set it as the seek target with <b>CdlSetloc</b>
+then call <b>CdRead()</b>.</p>
+
+
+<h2 id="readfunc">Simple File Read Function</h2>
+<p>The examples described above can be consolidated into a single function,
+which can be useful for quickly implementing a file read function for testing
+purposes:</p>
+<pre>u_long *load_file(const char* filename)
+{
+    CdlFILE	file;
+    u_long	*buffer;
+    
+    
+    printf( "Reading file %s... ", filename );
+
+    // Search for the file
+    if( !CdSearchFile( &amp;file;, (char*)filename ) )
+    {
+        // Return value is NULL, file is not found
+        printf( "Not found!\n" );
+        return NULL;
+    }
+    
+    // Allocate a buffer for the file
+    buffer = (u_long*)malloc( 2048*((file.size+2047)/2048) );
+
+    // Set seek target (seek actually happens on CdRead())
+    CdControl( CdlSetloc, (u_char*)&amp;file.pos;, 0 );
+
+    // Read sectors
+    CdRead( (file.size+2047)/2048, buffer, CdlModeSpeed );
+
+    // Wait until read has completed
+    CdReadSync( 0, 0 );
+    
+    printf( "Done.\n" );
+
+    return buffer;
+}
+</pre>
+<p>If you want to do asynchronous loading to do background animations, you'll
+have to use the CD functions more directly.</p>
+
+
+<h2 id="imagedemo">Image Loader Example</h2>
+<p>For completedness, this example demonstrates loading a high resolution 
+24-bit TIM from CD and displaying it into the framebuffer in 24-bit color mode.
+Take any image file you wish to use, scale it down to 640x480 and convert it
+into a 24-bit TIM with the load position set to (0,0). Name that TIM file 
+<i>myimage.tim</i> for this example.</p>
+<p><b>PsyQ/Programmers' Tool Version</b></p>
+<pre>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;libgte.h&gt;
+#include &lt;libgpu.h&gt;
+#include &lt;libetc.h&gt;
+#include &lt;libcd.h&gt;
+
+// Display environment struct
+DISPENV disp;
+
+u_long *load_file(const char* filename)
+{
+    CdlFILE file;
+    u_long  *buffer;
+    
+    
+    printf( "Reading file %s... ", filename );
+
+    // Search for the file
+    if( !CdSearchFile( &amp;file;, (char*)filename ) )
+    {
+        // Return value is NULL, file is not found
+        printf( "Not found!\n" );
+        return NULL;
+    }
+    
+    // Allocate a buffer for the file
+    buffer = (u_long*)malloc( 2048*((file.size+2047)/2048) );
+
+    // Set seek target (seek actually happens on CdRead())
+    CdControl( CdlSetloc, (u_char*)&amp;file.pos;, 0 );
+
+    // Read sectors
+    CdRead( (file.size+2047)/2048, buffer, CdlModeSpeed );
+
+    // Wait until read has completed
+    CdReadSync( 0, 0 );
+    
+    printf( "Done.\n" );
+
+    return buffer;
+}
+
+void display_picture()
+{
+    u_long      *image;
+    TIM_IMAGE   tim;
+
+    // Load the image file
+    if( !(image = load_file( "\\MYIMAGE.TIM;1" )) )
+    {
+        printf( "Could not load image file.\n " );
+        return;
+    }
+
+    // Read TIM header
+    OpenTIM( image );
+    ReadTIM( &amp;tim; );
+
+    // Load image to VRAM
+    LoadImage( tim.prect, tim.paddr );
+    DrawSync( 0 );
+
+    // Enable video display
+    VSync( 0 );
+    SetDispMask( 1 );
+}
+
+void init()
+{
+    // Reset GPU (also installs IRQ handlers which are mandatory)
+    ResetGraph(0);
+
+    // Init CD-ROM library
+    CdInit();
+
+    // Set DISPENV for 640x480 24-bit color mode
+    SetDefDispEnv( &amp;disp;, 0, 0, 640, 480 );
+    disp.isrgb24 = 1;   // Enables 24-bit (cannot be used for GPU graphics)
+    disp.isinter = 1;   // Enable interlace so hi-res will display properly
+
+    // Set display environment
+    PutDispEnv( &amp;disp; );
+}
+
+int main(int argc, const char *argv[])
+{
+    // Init stuff
+    init();
+
+    // Load and display picture
+    display_picture();
+
+    // Loop for safe idling
+    while( 1 )
+    {
+        VSync( 0 );
+    }
+
+    return 0;
+}
+</pre>
+
+<p><b>PSn00bSDK Version</b></p>
+<pre>#include &lt;stdio.h&gt;
+#include &lt;malloc.h&gt;
+#include &lt;psxgpu.h&gt;
+#include &lt;psxcd.h&gt;
+
+// Display environment struct
+DISPENV disp;
+
+
+unsigned int *load_file(const char* filename)
+{
+    CdlFILE	file;
+    unsigned int *buffer;
+    
+    
+    printf( "Reading file %s... ", filename );
+
+    // Search for the file
+    if( !CdSearchFile( &amp;file;, (char*)filename ) )
+    {
+        // Return value is NULL, file is not found
+        printf( "Not found!\n" );
+        return NULL;
+    }
+    
+    // Allocate a buffer for the file
+    buffer = (unsigned int*)malloc( 2048*((file.size+2047)/2048) );
+
+    // Set seek target (seek actually happens on CdRead())
+    CdControl( CdlSetloc, (unsigned char*)&amp;file.pos;, 0 );
+
+    // Read sectors
+    CdRead( (file.size+2047)/2048, buffer, CdlModeSpeed );
+
+    // Wait until read has completed
+    CdReadSync( 0, 0 );
+    
+    printf( "Done.\n" );
+
+    return buffer;
+}
+
+void display_picture()
+{
+    unsigned int    *image;
+    TIM_IMAGE       tim;
+
+    // Load the image file
+    if( !(image = load_file( "\\MYIMAGE.TIM;1" )) )
+    {
+        printf( "Could not load image file.\n " );
+        return;
+    }
+
+    // Read TIM header
+    GetTimInfo( image, &amp;tim; );
+
+    // Load image to VRAM
+    LoadImage( tim.prect, tim.paddr );
+    DrawSync( 0 );
+	
+    // Enable video display
+    VSync( 0 );
+    SetDispMask( 1 );
+}
+
+void init()
+{
+    // Reset GPU (also installs IRQ handlers which are mandatory)
+    ResetGraph(0);
+
+    // Init CD-ROM library
+    CdInit( 0 );
+
+    // Set DISPENV for 640x480 24-bit color mode
+    SetDefDispEnv( &amp;disp;, 0, 0, 640, 480 );
+    disp.isrgb24 = 1;   // Enables 24-bit (cannot be used for GPU graphics)
+    disp.isinter = 1;   // Enable interlace so hi-res will display properly
+
+    // Set display environment
+    PutDispEnv( &amp;disp; );
+}
+
+int main(int argc, const char *argv[])
+{
+    // Init stuff
+    init();
+
+    // Load and display picture
+    display_picture();
+    
+    // Loop for safe idling
+    while( 1 )
+    {
+        VSync( 0 );
+    }
+
+    return 0;
+}
+</pre>
+<p>Most notable differences between the PsyQ/Programmers' Tool and PSn00bSDK
+versions is the latter uses type <b>unsigned int</b> instead of <b>u_long</b>
+or <b>unsigned long</b> and for good reason. Modern compilers such as GCC
+7.4.0 tend to assume long to be a 64-bit integer and may cause problems when
+using <b>unsigned long</b>. There's no <b>OpenTIM()</b> and <b>ReadTIM()</b>
+equivalent. Instead, there's <b>GetTimInfo()</b> but this may change in the
+future.</p>
+<p>Make sure you've compiled the example as readfile.exe for coherency with
+the rest of this chapter.</p>
+
+<h2 id="imagebuild">Building the ISO image</h2>
+<p>In the past, the only way to create proper ISO images for PS1 games is to
+use a tool called BUILDCD included in leaked copies of the PsyQ SDK. The
+biggest problem of using BUILDCD is it generates an image file of a special
+format not supported by any burner program, so another tool has to be used
+(stripiso) to convert the image file it generates into a usable ISO image.
+Not only that, BUILDCD is a 16-bit DOS executable and is difficult and very
+slow to use on a modern system.</p>
+<p>Instead of using BUILDCD, use
+<a href="https://github.com/lameguy64/mkpsxiso">MKPSXISO</a> instead. It
+offers about the same functionality as BUILDCD but better, and is built for
+modern Windows and Linux platforms.</p>
+<p><b>MKPSXISO Project XML</b></p>
+<pre>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+
+&lt;!-- Defines the ISO project --&gt;
+&lt;iso_project image_name="readfile.iso"&gt;
+
+    &lt;!-- Defines the data track for this tutorial --&gt;
+    &lt;track type="data"&gt;
+
+        &lt;!-- Specifies identifier strings such as volume label --&gt;
+        &lt;!-- System and application identifiers must be PLAYSTATION --&gt;
+        &lt;identifiers
+            system      ="PLAYSTATION"
+            application ="PLAYSTATION"
+            volume      ="PSXTUTORIAL"
+            volume_set  ="PSXTUTORIAL"
+            publisher   ="MEIDOTEK"
+        /&gt;
+
+        &lt;!-- Defines the directory tree of the data track --&gt;
+        &lt;directory_tree&gt;
+
+            &lt;!-- Specify files in the directory tree --&gt;
+            &lt;file name="system.cnf"      type="data" source="system.cnf"/&gt;
+            &lt;file name="readfile.exe"    type="data" source="readfile.exe"/&gt;
+            &lt;file name="myimage.tim"     type="data" source="myimage.tim"/&gt;
+
+            &lt;!-- Place dummy sectors at the end --&gt;
+            &lt;dummy sectors="1024"/&gt;
+
+        &lt;/directory_tree&gt;
+
+    &lt;/track&gt;
+
+&lt;/iso_project&gt;
+</pre>
+<p>While on the subject of ISO image creation, you'll also need to create a
+special SYSTEM.CNF file in order to make your disc image bootable. A
+SYSTEM.CNF file is simply a text file that specifies the file name of the
+executable, stack address, number of task and event blocks. The latter three
+wouldn't be discussed in this chapter and the typical values are generally
+good enough.</p>
+<p><b>SYSTEM.CNF Contents</b></p>
+<pre>BOOT=cdrom:\readfile.exe;1
+TCB=4
+EVENT=10
+STACK=801FFFF0
+</pre>
+<p>Once your MKPSXISO project and SYSTEM.CNF files are set, execute MKPSXISO
+like so to create the ISO image:</p>
+<pre>mkpsxiso readfile.xml
+</pre>
+<p>Run the ISO image in an emulator and you should see your 24-bit TIM image
+displayed. It may take awhile for the image to appear as the 24-bit TIM image
+is a pretty big file to load for the PS1.</p>
+<p></p>
+
+<h2 id="conclusion">Conclusion</h2>
+<p>This chapter should cover about everything you need to know to load a file
+from CD-ROM. The next chapter will cover common ways to optimize CD-ROM
+accesses to speed up load times in your homebrew.</p>
+
+<hr>
+<table width="100%" class="footer-table">
+<tbody><tr>
+<td width="40%" align="left"><a href="1-cdrom.html">Previous</a></td>
+<td width="20%" align="center"><a href="/index.html">Back to Index</a></td>
+<td width="40%" align="right"><a href="3-optimizing.html">Next</a></td>
+</tr>
+</tbody></table>
+
+
+<hr>
+<center><p>2020 - 2021 Lameguy64 / Meido-Tek Productions</p></center>
+
+</body></html>
