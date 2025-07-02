@@ -106,7 +106,7 @@ with the value of 0xFFFFFFFF which is used as a terminator value for ordering
 table processing. An ordering table is normally created using <b>ClearOTagR()</b>
 on an array of 32-bit ints.</p>
 <p>The following figure visually describes the general structure of an ordering table.</p>
-<img src="/chapter1/images/ordertable.svg">
+<img src="images/ordertable.svg">
 <p>Adding primitives to an ordering table is normally achieved using 
 <b>addPrim()/AddPrim()</b> functions. <b>DrawOTag()</b> is used to begin
 processing of an ordering table.</p>
@@ -131,7 +131,7 @@ a specified primitive to specified coordinates of the drawing area carried by
 the packet. Primitive packets are always aligned 4-byte aligned.</p>
 <p>The following illustrates the typical structure of a primitive packet
 (the packet represents a <b>SPRT</b> primitive):</p>
-<img src="/chapter1/images/primstruct.svg">
+<img src="images/primstruct.svg">
 <p>C implementation of the above structure</p>
 <pre>typedef struct {
     unsigned int  tag;             // First 24 bits are address, last 8 bits are length
@@ -249,13 +249,13 @@ overflow corruption.</p>
 the chain, so it gets processed when the OT is proceessed by the GPU. The
 following figure visually describes the result of sorting a primitive to ordering
 table element 4.</p>
-<img src="/chapter1/images/ordertable-primitive.svg">
+<img src="images/ordertable-primitive.svg">
 <p>A very common misconception among many PS1 homebrew programmers is they believe
 only a single primitive can be sorted to an ordering table element. This is
 absolutely untrue because sorting a primitive to an element that has a primitive
 already linked to it will only add further to the chain, not replace the previous
 element.</p>
-<img src="/chapter1/images/ordertable-multiprims.svg">
+<img src="images/ordertable-multiprims.svg">
 <p>You can sort any number of primitives to a single ordering table, so an ordering
 table of 4 to 8 elements should be sufficient for 2D projects. But remember that the
 newest primitive sorted will be the first to be processed, as shown in the figure
@@ -285,7 +285,7 @@ running while the GPU is busy processing graphics, you can utilize this to
 continue processing graphics primitives for drawing the next frame while the
 GPU is drawing. The following figure visually describes the performance
 difference.</p>
-<img src="/chapter1/images/ordertable-buffercompare.svg">
+<img src="images/ordertable-buffercompare.svg">
 <p>Having double buffers essentially minimizes keeping the GPU idle which
 comes off as being most efficient, as having single buffers would prevent
 you from preparing primitives for the next frame which results to leaving
@@ -377,7 +377,7 @@ int main() {
 </pre>
 <p>Compile and run the program and you should get a yellow square.
 Your very first graphic done with the GPU!</p>
-<img src="/chapter1/images/2-graphics.png">
+<img src="images/2-graphics.png">
 
 <h2 id="conclusion">Conclusion</h2>
 <p>This concludes Chapter 1.2. of Lameguy64's PSX Tutorial series.

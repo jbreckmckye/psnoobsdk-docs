@@ -114,7 +114,7 @@ are stored at quarter and half of the actual width of the texture respectively
 as shown in the image below.
 </p>
 <center>
-<img src="/chapter1/images/vram-texture-widths.png">
+<img src="images/vram-texture-widths.png">
 <i>4-bit, 8-bit and 16-bit texture images as they appear logically in VRAM</i>
 </center>
 <p>
@@ -174,7 +174,7 @@ coordinates are still X,Y but with a 64x256 granularity instead. The image
 below visually illustrates the cells of each texture page.
 </p>
 <center>
-<img src="/chapter1/images/vram-texture-pages.svg">
+<img src="images/vram-texture-pages.svg">
 <i>Texture page grid of the VRAM</i>
 </center>
 <p>
@@ -189,7 +189,7 @@ and drawn, such as animation frames of one particular character in a large
 sprite sheet.
 </p>
 <center>
-<img src="/chapter1/images/page-texcoord-relation.svg">
+<img src="images/page-texcoord-relation.svg">
 <i>An example of using U,V coordinates to select a particular sprite  (in this
 case at 48,32) in a sprite sheet</i>
 </center>
@@ -211,7 +211,7 @@ specify a U,V coordinate of 96,24 in your primitive as if the texture were
 still 16-bit.
 </p>
 <center>
-<img src="/chapter1/images/vram-texture-coordinates.svg">
+<img src="images/vram-texture-coordinates.svg">
 <i>Texture coordinates are always true to the actual size of the
 texture image</i>
 </center>
@@ -360,7 +360,7 @@ convert it into a 4-bit or 8-bit TIM as this tutorial is also going to cover
 how to work with CLUTs.
 </p>
 <center>
-<img src="/chapter1/images/texture64.png">
+<img src="images/texture64.png">
 </center>
 <p>
 When converting the image, always remember that texture image and CLUT
@@ -798,7 +798,7 @@ Compile the example, run it and you should get a yellow square cascaded by
 a sprite with your texture image.
 </p>
 <center>
-<img src="/chapter1/images/3-textures.png">
+<img src="images/3-textures.png">
 </center>
 <p>
 You may notice that the untextured rectangle is drawn before the textured
@@ -810,7 +810,7 @@ and the PS1 hardware parses the ordering table from the top of the array
 to the bottom with a reverse ordering table (created with <b>ClearOTagR()</b>).
 </p>
 <center>
-<img src="/chapter1/images/ordertable-multiprims.svg">
+<img src="images/ordertable-multiprims.svg">
 <i>How primitives are <b>appended</b> to a preoccupied ordering table entry</i>
 </center>
 <p>
